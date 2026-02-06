@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/quiz.html"
+    }
+  ],
+  "buildCommand": "echo 'No build required'",
+  "outputDirectory": "."
+}
