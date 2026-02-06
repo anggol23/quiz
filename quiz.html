@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuizMaster</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/_sdk/element_sdk.js"></script>
-  <script src="/_sdk/data_sdk.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
@@ -416,78 +417,137 @@ Jawaban: a
     let questionCounter = 0;
     let deleteConfirmTarget = null;
 
-    // Simple Data SDK Fallback using localStorage
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBjtWQgx6N_AVUmDVR7gO_YE8wnBPopaII",
+      authDomain: "hehequiz.firebaseapp.com",
+      databaseURL: "https://hehequiz-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "hehequiz",
+      storageBucket: "hehequiz.firebasestorage.app",
+      messagingSenderId: "911651916458",
+      appId: "1:911651916458:web:4fd6c55eba4899a1881ed3"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Firebase Data SDK
     if (!window.dataSdk) {
       window.dataSdk = {
         async init(options) {
           try {
-            // Load data from localStorage
-            const stored = localStorage.getItem('quiz_data');
-            allData = stored ? JSON.parse(stored) : [];
+            // Load data from Firebase Realtime Database
+            const snapshot = await db.ref('quiz_data').once('value');
+            allData = [];
+            
+            snapshot.forEach(childSnapshot => {
+              allData.push({
+                ...childSnapshot.val(),
+                __backendId: childSnapshot.key
+              });
+            });
             
             if (options.onDataChanged) {
               options.onDataChanged(allData);
             }
             
+            // Listen for real-time changes
+            db.ref('quiz_data').on('child_added', (snapshot) => {
+              const exists = allData.find(d => d.__backendId === snapshot.key);
+              if (!exists) {
+                allData.push({
+                  ...snapshot.val(),
+                  __backendId: snapshot.key
+                });
+                if (options.onDataChanged) {
+                  options.onDataChanged(allData);
+                }
+              }
+            });
+
+            db.ref('quiz_data').on('child_removed', (snapshot) => {
+              allData = allData.filter(d => d.__backendId !== snapshot.key);
+              if (options.onDataChanged) {
+                options.onDataChanged(allData);
+              }
+            });
+
+            db.ref('quiz_data').on('child_changed', (snapshot) => {
+              const index = allData.findIndex(d => d.__backendId === snapshot.key);
+              if (index !== -1) {
+                allData[index] = {
+                  ...snapshot.val(),
+                  __backendId: snapshot.key
+                };
+                if (options.onDataChanged) {
+                  options.onDataChanged(allData);
+                }
+              }
+            });
+            
             return { isOk: true };
           } catch (error) {
-            console.error('Error initializing dataSdk:', error);
+            console.error('Error initializing Firebase:', error);
             return { isOk: false, message: error.message };
           }
         },
         
         async create(data) {
           try {
-            // Generate a backend ID
-            const backendId = 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const newRef = db.ref('quiz_data').push();
+            await newRef.set({
+              ...data,
+              created_at: new Date().toISOString()
+            });
+            
             const newData = {
               ...data,
-              __backendId: backendId,
+              __backendId: newRef.key,
               created_at: new Date().toISOString()
             };
             
             allData.push(newData);
-            localStorage.setItem('quiz_data', JSON.stringify(allData));
             
-            console.log('Data saved to localStorage:', newData);
+            console.log('Data saved to Firebase:', newData);
             
             return { 
               isOk: true, 
-              backendId: backendId,
+              backendId: newRef.key,
               data: newData
             };
           } catch (error) {
-            console.error('Error creating data:', error);
+            console.error('Error creating data in Firebase:', error);
             return { isOk: false, message: error.message };
           }
         },
         
         async update(id, data) {
           try {
+            await db.ref(`quiz_data/${id}`).update({
+              ...data,
+              updated_at: new Date().toISOString()
+            });
+            
             const index = allData.findIndex(d => d.__backendId === id);
             if (index !== -1) {
               allData[index] = { ...allData[index], ...data, updated_at: new Date().toISOString() };
-              localStorage.setItem('quiz_data', JSON.stringify(allData));
-              return { isOk: true };
             }
-            return { isOk: false, message: 'Data not found' };
+            
+            return { isOk: true };
           } catch (error) {
-            console.error('Error updating data:', error);
+            console.error('Error updating data in Firebase:', error);
             return { isOk: false, message: error.message };
           }
         },
         
         async delete(id) {
           try {
-            const index = allData.findIndex(d => d.__backendId === id);
-            if (index !== -1) {
-              allData.splice(index, 1);
-              localStorage.setItem('quiz_data', JSON.stringify(allData));
-              return { isOk: true };
-            }
-            return { isOk: false, message: 'Data not found' };
+            await db.ref(`quiz_data/${id}`).remove();
+            allData = allData.filter(d => d.__backendId !== id);
+            return { isOk: true };
           } catch (error) {
-            console.error('Error deleting data:', error);
+            console.error('Error deleting data from Firebase:', error);
             return { isOk: false, message: error.message };
           }
         }
