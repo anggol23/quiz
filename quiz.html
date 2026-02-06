@@ -352,7 +352,7 @@ Jawaban: a
        <h3 class="font-bold text-gray-800 mb-4">Review Jawaban</h3>
        <div id="review-container" class="space-y-4 max-h-96 overflow-y-auto"><!-- Reviews will be rendered here -->
        </div>
-      </div><button onclick="showView('home')" class="btn-primary text-white px-8 py-4 rounded-xl font-bold text-lg w-full"> Kembali ke Beranda </button>
+      </div><button onclick="backToJoinFromResult()" class="btn-primary text-white px-8 py-4 rounded-xl font-bold text-lg w-full"> Kembali ke Beranda </button>
      </div>
     </div><!-- Quiz Detail View (for creators) -->
     <div id="quiz-detail-view" class="max-w-4xl mx-auto fade-in hidden"><button onclick="showView('home')" class="flex items-center gap-2 text-white/80 hover:text-white mb-8 transition">
@@ -1503,6 +1503,32 @@ Jawaban: a
 
     // Initialize on load
     initializeApp();
+
+    // Back to join-quiz and prefill code (used after result)
+    function backToJoinFromResult() {
+      // If we have a current quiz, find its code; otherwise just show join view
+      let code = '';
+      if (currentQuizId) {
+        const quiz = allData.find(d => d.__backendId === currentQuizId && d.type === 'quiz');
+        if (quiz && quiz.quiz_id) {
+          code = quiz.quiz_id.replace('quiz_', '').slice(-6).toUpperCase();
+        }
+      }
+
+      showView('join-quiz');
+      // Ensure code step visible and participant step hidden
+      const codeStep = document.getElementById('quiz-code-step');
+      const partStep = document.getElementById('participant-info-step');
+      if (codeStep) codeStep.classList.remove('hidden');
+      if (partStep) partStep.classList.add('hidden');
+
+      if (code) {
+        const input = document.getElementById('quiz-code');
+        if (input) {
+          input.value = code;
+        }
+      }
+    }
   </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c9a9eac14763dc8',t:'MTc3MDM4MDYxNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
