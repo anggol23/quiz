@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # QuizMaster - Platform Kuis Interaktif
 
 Platform kuis online yang memungkinkan guru membuat kuis dan siswa mengerjakan dengan soal pilihan ganda dan essay.
@@ -132,3 +133,6 @@ MIT
 ## Author
 
 Created with ❤️ for education
+=======
+# quiz
+>>>>>>> c38b032d3a034f0ee74540b77b3477800aa42bfa
